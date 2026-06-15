@@ -34,6 +34,14 @@
   }
   .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; min-height: 100vh; }
 
+  /* 새로 시작 바 (모든 화면 상시) */
+  .topbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+  .btn-reset {
+    background: transparent; border: 1px solid var(--line); color: var(--sub);
+    font-size: .82rem; min-height: 34px; padding: 4px 12px; border-radius: 999px; font-weight: 600;
+  }
+  .btn-reset:active { background: var(--accent-soft); }
+
   /* 진행 점 */
   .progress { display: flex; gap: 8px; justify-content: center; margin: 8px 0 20px; }
   .progress[hidden] { display: none; }   /* hidden 속성이 display:flex에 덮이지 않도록 */
@@ -188,7 +196,7 @@
     @page { size: A4; margin: 18mm; }
     body { background: #fff; }
     /* 화면 전용 UI는 인쇄에서 숨김 */
-    .progress, .nav, .actions, .decorate, .screen > h2 { display: none !important; }
+    .topbar, .progress, .nav, .actions, .decorate, .screen > h2 { display: none !important; }
     .screen:not(.active) { display: none !important; }
     .wrap { max-width: none; padding: 0; }
     #print-area { display: block; }
@@ -200,6 +208,11 @@
 </head>
 <body>
 <div class="wrap">
+
+  <!-- 새로 시작 (공용 컴퓨터 — 앞 반 흔적 초기화) -->
+  <div class="topbar">
+    <button class="btn-reset" onclick="confirmRestart()">↻ 새로 시작</button>
+  </div>
 
   <!-- 진행 점 (표지/카드 화면에서는 숨김) -->
   <div class="progress" id="progress" hidden>
@@ -327,6 +340,7 @@
     </div>
 
     <div class="actions">
+      <button class="btn-ghost" style="width:100%" onclick="go(4)">← 뒤로 가서 고치기</button>
       <div class="two">
         <button class="btn-save" onclick="saveCard()">PNG로 저장</button>
         <button class="btn-print" onclick="window.print()">인쇄</button>
@@ -570,9 +584,11 @@
   // === 완성 ===
   function finish(skip) {
     if (!skip) recipe.pinch = document.getElementById("pinch").value.trim();
-    // 요리사명·날짜 받기
-    const name = (prompt("요리사 이름을 적어 주세요 (별명도 좋아요)") || "").trim();
-    recipe.cookName = name.slice(0, 20);
+    // 요리사명은 처음 한 번만 물음 (뒤로 가서 고친 뒤 다시 완성해도 재질문 안 함)
+    if (!recipe.cookName) {
+      const name = (prompt("요리사 이름을 적어 주세요 (별명도 좋아요)") || "").trim();
+      recipe.cookName = name.slice(0, 20);
+    }
     recipe.date = todayStr();
     fillCard();
     go(5);
@@ -619,6 +635,9 @@
   }
 
   // === 다시 시작 ===
+  function confirmRestart() {
+    if (confirm("지금까지 만든 내용을 지우고 처음부터 시작할까요?")) restart();
+  }
   function restart() {
     recipe.ideals = []; recipe.virtues = []; recipe.kitchen = "";
     recipe.pinch = ""; recipe.cookName = ""; recipe.date = "";
