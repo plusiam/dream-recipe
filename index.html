@@ -123,14 +123,23 @@
 
   /* === 레시피 카드 === */
   #card {
+    --c-border: var(--accent);
+    --c-soft: var(--accent-soft);
+    --c-title: var(--accent);
+    --c-chip-text: #b3501f;
     background: var(--card);
-    border: 3px solid var(--accent);
+    border: 3px solid var(--c-border);
     border-radius: 22px;
     padding: 26px 22px;
     box-shadow: 0 8px 22px rgba(180,120,70,.18);
   }
+  /* 카드 테마 (색 세트) */
+  #card.theme-strawberry { --c-border:#e25c7a; --c-soft:#fde0e7; --c-title:#d6456a; --c-chip-text:#b83358; }
+  #card.theme-sea        { --c-border:#4f8fc0; --c-soft:#dcebf6; --c-title:#3f7fb0; --c-chip-text:#2f6088; }
+  #card.theme-forest     { --c-border:#5b9e6f; --c-soft:#e0f0e6; --c-title:#3f8557; --c-chip-text:#2f6b43; }
+  #card .card-icon { text-align: center; font-size: 2.4rem; line-height: 1; margin-bottom: 2px; }
   #card .card-title {
-    text-align: center; font-size: 1.5rem; font-weight: 800; color: var(--accent);
+    text-align: center; font-size: 1.5rem; font-weight: 800; color: var(--c-title);
     margin-bottom: 4px;
   }
   #card .card-sub { text-align: center; color: var(--sub); font-size: .9rem; margin-bottom: 18px; }
@@ -140,7 +149,7 @@
   .row .ricon { font-size: 1.1rem; }
   .rchips { display: flex; flex-wrap: wrap; gap: 8px; }
   .rchips .rc {
-    background: var(--accent-soft); color: #b3501f; border-radius: 999px;
+    background: var(--c-soft); color: var(--c-chip-text); border-radius: 999px;
     padding: 6px 14px; font-weight: 700; font-size: 1.05rem;
   }
   .placeholder {
@@ -156,6 +165,16 @@
   .card-foot .fitem span { color: var(--sub); font-weight: 600; font-size: .85rem; display: block; }
   .card-note { text-align: center; color: var(--sub); font-size: .9rem; margin-top: 14px; }
 
+  /* 꾸미기 패널 (카드 완성 화면) */
+  .decorate { background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 16px; }
+  .dec-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; flex-wrap: wrap; }
+  .dec-label { font-size: .9rem; color: var(--sub); font-weight: 700; width: 44px; }
+  .dec-themes, .dec-icons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sw { width: 44px; height: 44px; min-height: 44px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--line); cursor: pointer; }
+  .sw.on { box-shadow: 0 0 0 3px var(--ink); }
+  .ic { width: 46px; height: 46px; min-height: 46px; border-radius: 12px; border: 2px solid var(--line); background: #fff; font-size: 1.5rem; cursor: pointer; }
+  .ic.on { border-color: var(--accent); background: var(--accent-soft); }
+
   /* 카드 화면 액션 */
   .actions { display: grid; gap: 10px; margin-top: 20px; }
   .actions .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -169,7 +188,7 @@
     @page { size: A4; margin: 18mm; }
     body { background: #fff; }
     /* 화면 전용 UI는 인쇄에서 숨김 */
-    .progress, .nav, .actions, .screen > h2 { display: none !important; }
+    .progress, .nav, .actions, .decorate, .screen > h2 { display: none !important; }
     .screen:not(.active) { display: none !important; }
     .wrap { max-width: none; padding: 0; }
     #print-area { display: block; }
@@ -263,6 +282,7 @@
     <!-- 인쇄/캡처 대상 -->
     <div id="print-area">
       <div id="card">
+        <div class="card-icon" id="cIcon">🍳</div>
         <div class="card-title">나다움 레시피</div>
         <div class="card-sub">나는 꿈 요리사</div>
 
@@ -295,6 +315,17 @@
       </div>
     </div>
 
+    <div class="decorate">
+      <div class="dec-row">
+        <span class="dec-label">테마</span>
+        <div class="dec-themes" id="themePicker"></div>
+      </div>
+      <div class="dec-row">
+        <span class="dec-label">아이콘</span>
+        <div class="dec-icons" id="iconPicker"></div>
+      </div>
+    </div>
+
     <div class="actions">
       <div class="two">
         <button class="btn-save" onclick="saveCard()">PNG로 저장</button>
@@ -309,7 +340,7 @@
 
 <script>
   // === 상태: 카드 한 장의 모든 내용을 한 객체로 (2차 확장 대비) ===
-  const recipe = { ideals: [], virtues: [], kitchen: "", pinch: "", cookName: "", date: "" };
+  const recipe = { ideals: [], virtues: [], kitchen: "", pinch: "", cookName: "", date: "", theme: "", icon: "🍳" };
 
   // === 콘텐츠 ===
   const IDEALS = [
@@ -337,6 +368,40 @@
     const set = new Set();
     recipe.ideals.forEach(id => (VIRTUE_HINTS[id] || []).forEach(v => set.add(v)));
     return set;
+  }
+
+  // 꾸미기 — 카드 테마(색)와 요리 아이콘
+  const THEMES = [
+    { key: "",                 name: "당근", sw: "#e8743b" },
+    { key: "theme-strawberry", name: "딸기", sw: "#e25c7a" },
+    { key: "theme-sea",        name: "바다", sw: "#4f8fc0" },
+    { key: "theme-forest",     name: "숲",   sw: "#5b9e6f" }
+  ];
+  const ICONS = ["🍳", "🍲", "🥘", "🍜", "🍱", "🥗", "🍙", "🍰", "🧁", "🍪"];
+
+  function applyTheme() { document.getElementById("card").className = recipe.theme; }
+  function applyIcon() { document.getElementById("cIcon").textContent = recipe.icon; }
+  function renderDecorate() {
+    const tp = document.getElementById("themePicker");
+    tp.innerHTML = "";
+    THEMES.forEach(t => {
+      const b = document.createElement("button");
+      b.className = "sw" + (recipe.theme === t.key ? " on" : "");
+      b.style.background = t.sw;
+      b.setAttribute("aria-label", t.name + " 테마");
+      b.onclick = () => { recipe.theme = t.key; applyTheme(); renderDecorate(); };
+      tp.appendChild(b);
+    });
+    const ip = document.getElementById("iconPicker");
+    ip.innerHTML = "";
+    ICONS.forEach(ic => {
+      const b = document.createElement("button");
+      b.className = "ic" + (recipe.icon === ic ? " on" : "");
+      b.textContent = ic;
+      b.setAttribute("aria-label", "아이콘 " + ic);
+      b.onclick = () => { recipe.icon = ic; applyIcon(); renderDecorate(); };
+      ip.appendChild(b);
+    });
   }
 
   // === 화면 전환 ===
@@ -484,6 +549,8 @@
 
     document.getElementById("cCook").textContent = recipe.cookName || "　";
     document.getElementById("cDate").textContent = recipe.date;
+
+    applyTheme(); applyIcon(); renderDecorate();
   }
   function setCellOrPlaceholder(id, text) {
     const el = document.getElementById(id);
@@ -555,6 +622,7 @@
   function restart() {
     recipe.ideals = []; recipe.virtues = []; recipe.kitchen = "";
     recipe.pinch = ""; recipe.cookName = ""; recipe.date = "";
+    recipe.theme = ""; recipe.icon = "🍳";
     document.getElementById("kitchen").value = "";
     document.getElementById("pinch").value = "";
     renderIdeals(); updateIdealCount();
