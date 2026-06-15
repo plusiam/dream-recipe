@@ -107,6 +107,8 @@
     padding: 12px 18px; font-size: 1.05rem; font-weight: 600; min-height: 48px;
   }
   .chip.sel { border-color: var(--ok); background: #e7f3ea; color: #2f6b43; }
+  .chip.rec { border-color: var(--accent); background: #fff6ef; }
+  .rec-tag { font-size: .7rem; color: var(--accent); font-weight: 700; margin-left: 6px; vertical-align: middle; }
   .chip-add { border-style: dashed; color: var(--accent); }
 
   /* 입력 */
@@ -216,6 +218,7 @@
     <p class="step-label">② 필요한 재료 (미덕)</p>
     <h2>그 요리에 어떤 재료가 필요할까요?</h2>
     <p class="lead">2~3개 정도 골라요. 없는 재료는 직접 더해도 좋아요.</p>
+    <p class="field-help" id="recNote" hidden>옅게 표시된 재료는 추천일 뿐이에요. 내 요리에 필요한 걸 자유롭게 골라요.</p>
     <div class="chips" id="virtueChips"></div>
     <p class="count-hint" id="virtueCount">고른 재료 0개</p>
     <div class="nav">
@@ -317,6 +320,24 @@
     "정직", "책임", "존중", "배려", "공감", "용기", "인내", "절제",
     "성실", "협동", "감사", "정의", "겸손", "관용", "자주", "신뢰"
   ];
+  // 인재상 → 추천 미덕 (옅은 힌트일 뿐 강요 아님 — 교사가 자유롭게 수정)
+  const VIRTUE_HINTS = {
+    "탐구하는": ["자주", "성실", "용기"],
+    "지식이 풍부한": ["성실", "인내", "책임"],
+    "사고하는": ["정의", "용기", "절제"],
+    "소통하는": ["공감", "존중", "배려"],
+    "원칙을 지키는": ["정직", "책임", "정의"],
+    "열린 마음을 지닌": ["관용", "존중", "겸손"],
+    "배려하는": ["배려", "공감", "감사"],
+    "도전하는": ["용기", "인내", "자주"],
+    "균형 잡힌": ["절제", "인내", "감사"],
+    "성찰하는": ["겸손", "정직", "성실"]
+  };
+  function recommendedVirtues() {
+    const set = new Set();
+    recipe.ideals.forEach(id => (VIRTUE_HINTS[id] || []).forEach(v => set.add(v)));
+    return set;
+  }
 
   // === 화면 전환 ===
   function go(step) {
@@ -330,6 +351,7 @@
     } else {
       prog.hidden = true;
     }
+    if (step === 2) renderChips();   // 고른 인재상에 맞춰 추천 갱신
     renderRecap(step);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -400,10 +422,13 @@
   const chipBox = document.getElementById("virtueChips");
   function renderChips() {
     chipBox.innerHTML = "";
+    const rec = recommendedVirtues();
     VIRTUES.forEach(v => {
       const c = document.createElement("button");
-      c.className = "chip" + (recipe.virtues.includes(v) ? " sel" : "");
-      c.textContent = v;
+      const sel = recipe.virtues.includes(v);
+      const isRec = rec.has(v) && !sel;
+      c.className = "chip" + (sel ? " sel" : (isRec ? " rec" : ""));
+      c.innerHTML = escapeHtml(v) + (isRec ? '<span class="rec-tag">추천</span>' : '');
       c.onclick = () => toggleVirtue(v);
       chipBox.appendChild(c);
     });
@@ -412,6 +437,8 @@
     add.textContent = "＋ 직접 넣기";
     add.onclick = addVirtue;
     chipBox.appendChild(add);
+    const note = document.getElementById("recNote");
+    if (note) note.hidden = rec.size === 0;
   }
   function toggleVirtue(v) {
     const i = recipe.virtues.indexOf(v);
