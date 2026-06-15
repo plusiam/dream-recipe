@@ -265,7 +265,7 @@
     <p class="step-label">③ 지금 내 부엌엔</p>
     <h2>지금 나에게 이미 있는 재료는?</h2>
     <p class="lead">부족한 게 아니라, 지금 가진 재료예요. 비워둬도 괜찮아요.</p>
-    <input type="text" id="kitchen" placeholder="나는 ___ 이야 (예: 잘 웃는 사람)" />
+    <input type="text" id="kitchen" placeholder="예: 잘 웃는 사람 / 마음이 따뜻한 사람" />
     <div class="nav">
       <button class="btn-ghost" onclick="go(2)">이전</button>
       <button class="btn-ghost" onclick="go(4)">건너뛰기</button>
@@ -279,7 +279,7 @@
     <p class="step-label">④ 오늘의 한 꼬집</p>
     <h2>오늘 해볼 작은 한 가지는?</h2>
     <p class="lead">아주 작은 실천 하나면 충분해요. 비워둬도 괜찮아요.</p>
-    <input type="text" id="pinch" placeholder="오늘 나는 ___ 을 해볼래" />
+    <input type="text" id="pinch" placeholder="예: 친구 이야기 끝까지 듣기" />
     <div class="nav">
       <button class="btn-ghost" onclick="go(3)">이전</button>
       <button class="btn-ghost" onclick="finish(true)">건너뛰기</button>
@@ -558,8 +558,11 @@
       cv.innerHTML = `<div class="placeholder">천천히 채워가요</div>`;
     }
 
-    setCellOrPlaceholder("cKitchen", recipe.kitchen ? "나는 " + recipe.kitchen + " 이야" : "");
-    setCellOrPlaceholder("cPinch", recipe.pinch ? "오늘 나는 " + recipe.pinch + " 을 해볼래" : "");
+    // 받침에 따라 달라지는 조사(을/이야)는 붙이지 않음. 겹치는 '나는·오늘'은 정리.
+    setCellOrPlaceholder("cKitchen",
+      recipe.kitchen ? "나는 " + recipe.kitchen.replace(/^\s*나는\s*/, "") : "");
+    setCellOrPlaceholder("cPinch",
+      recipe.pinch ? "오늘 나는 " + recipe.pinch.replace(/^\s*오늘\s*/, "").replace(/^\s*나는\s*/, "") + " 해볼래" : "");
 
     document.getElementById("cCook").textContent = recipe.cookName || "　";
     document.getElementById("cDate").textContent = recipe.date;
