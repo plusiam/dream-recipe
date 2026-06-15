@@ -98,6 +98,7 @@
     transition: border-color .15s, background .15s;
   }
   .opt.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .opt-add { border-style: dashed; color: var(--accent); }
 
   /* 미덕 칩 */
   .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
@@ -200,12 +201,9 @@
   <section class="screen" data-step="1">
     <p class="step-label">① 만들고 싶은 요리</p>
     <h2>나는 어떤 사람이 되어가고 싶나요?</h2>
-    <p class="lead">마음에 드는 요리를 하나 골라요. 직접 적어도 좋아요.</p>
+    <p class="lead">여러 개 골라도 좋아요. 내 요리의 큰 맛을 1~3개쯤 골라 봐요.</p>
     <div class="ideal-grid" id="idealGrid"></div>
-    <div style="margin-top:12px">
-      <input type="text" id="idealCustom" placeholder="직접 적기 (예: 끝까지 해내는)" />
-      <p class="field-help">고른 카드 대신 직접 적으면 그게 내 요리가 돼요.</p>
-    </div>
+    <p class="count-hint" id="idealCount">고른 요리 0개</p>
     <div class="nav">
       <button class="btn-ghost" onclick="go(0)">이전</button>
       <div class="spacer"></div>
@@ -308,7 +306,7 @@
 
 <script>
   // === 상태: 카드 한 장의 모든 내용을 한 객체로 (2차 확장 대비) ===
-  const recipe = { ideal: "", virtues: [], kitchen: "", pinch: "", cookName: "", date: "" };
+  const recipe = { ideals: [], virtues: [], kitchen: "", pinch: "", cookName: "", date: "" };
 
   // === 콘텐츠 ===
   const IDEALS = [
@@ -342,8 +340,8 @@
     if (step < 2 || step > 4) { recap.hidden = true; return; }
     recipe.kitchen = document.getElementById("kitchen").value.trim();  // 최신 입력 반영
     const items = [];
-    if (recipe.ideal)
-      items.push(`<span class="rcap-item"><b>🍳</b>${escapeHtml(recipe.ideal)} 사람</span>`);
+    if (recipe.ideals.length)
+      items.push(`<span class="rcap-item"><b>🍳</b>${escapeHtml(recipe.ideals.join(" · "))} 사람</span>`);
     if (step >= 3 && recipe.virtues.length)
       items.push(`<span class="rcap-item"><b>🧺</b>${recipe.virtues.map(escapeHtml).join(" · ")}</span>`);
     if (step >= 4 && recipe.kitchen)
@@ -353,29 +351,46 @@
     recap.hidden = false;
   }
 
-  // === S1 인재상 ===
+  // === S1 인재상 (여러 개 선택 가능) ===
   const idealGrid = document.getElementById("idealGrid");
-  IDEALS.forEach(name => {
-    const b = document.createElement("button");
-    b.className = "opt";
-    b.textContent = name + " 사람";
-    b.onclick = () => {
-      idealGrid.querySelectorAll(".opt").forEach(o => o.classList.remove("sel"));
-      b.classList.add("sel");
-      recipe.ideal = name;
-      document.getElementById("idealCustom").value = "";
-    };
-    idealGrid.appendChild(b);
-  });
-  document.getElementById("idealCustom").addEventListener("input", e => {
-    if (e.target.value.trim()) {
-      idealGrid.querySelectorAll(".opt").forEach(o => o.classList.remove("sel"));
-      recipe.ideal = e.target.value.trim();
-    }
-  });
+  function renderIdeals() {
+    idealGrid.innerHTML = "";
+    IDEALS.forEach(name => {
+      const b = document.createElement("button");
+      b.className = "opt" + (recipe.ideals.includes(name) ? " sel" : "");
+      b.textContent = name + " 사람";
+      b.onclick = () => toggleIdeal(name);
+      idealGrid.appendChild(b);
+    });
+    const add = document.createElement("button");
+    add.className = "opt opt-add";
+    add.textContent = "＋ 직접 넣기";
+    add.onclick = addIdeal;
+    idealGrid.appendChild(add);
+  }
+  function toggleIdeal(name) {
+    const i = recipe.ideals.indexOf(name);
+    if (i >= 0) recipe.ideals.splice(i, 1);
+    else recipe.ideals.push(name);
+    renderIdeals(); updateIdealCount();
+  }
+  function addIdeal() {
+    let v = (prompt("어떤 사람이 되고 싶나요? (예: 끝까지 해내는)") || "").trim();
+    if (!v) return;
+    if (v.length > 15) { alert("15자까지 적을 수 있어요."); return; }
+    v = v.replace(/\s*사람$/, "");   // '~사람'으로 끝나면 중복 방지
+    if (!v) return;
+    if (!IDEALS.includes(v)) IDEALS.push(v);
+    if (!recipe.ideals.includes(v)) recipe.ideals.push(v);
+    renderIdeals(); updateIdealCount();
+  }
+  function updateIdealCount() {
+    document.getElementById("idealCount").textContent = "고른 요리 " + recipe.ideals.length + "개";
+  }
+  renderIdeals();
   function next1() {
-    if (!recipe.ideal) {
-      alert("되어가고 싶은 요리를 하나 골라 주세요.");
+    if (!recipe.ideals.length) {
+      alert("되어가고 싶은 요리를 하나 이상 골라 주세요.");
       return;
     }
     go(2);
@@ -426,7 +441,7 @@
     recipe.pinch = document.getElementById("pinch").value.trim();
 
     document.getElementById("cIdeal").textContent =
-      "나는 " + recipe.ideal + " 사람이 되어가려 해";
+      "나는 " + recipe.ideals.join(" · ") + " 사람이 되어가려 해";
 
     const cv = document.getElementById("cVirtues");
     if (recipe.virtues.length) {
@@ -511,12 +526,11 @@
 
   // === 다시 시작 ===
   function restart() {
-    recipe.ideal = ""; recipe.virtues = []; recipe.kitchen = "";
+    recipe.ideals = []; recipe.virtues = []; recipe.kitchen = "";
     recipe.pinch = ""; recipe.cookName = ""; recipe.date = "";
-    idealGrid.querySelectorAll(".opt").forEach(o => o.classList.remove("sel"));
-    document.getElementById("idealCustom").value = "";
     document.getElementById("kitchen").value = "";
     document.getElementById("pinch").value = "";
+    renderIdeals(); updateIdealCount();
     renderChips(); updateCount();
     go(0);
   }
